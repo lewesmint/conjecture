@@ -34,15 +34,19 @@ def parse_conversion_args(conversion_args):
 # Argparse setup
 parser = argparse.ArgumentParser(description="File conversion tool.")
 parser.add_argument(
+    'file', type=str,
+    help="Path to the file to be converted."
+)
+parser.add_argument(
     '-c', '--convert', nargs='+', required=True,
-    help="Specify the line ending (CR, LF, CRLF, DOS, Unix) and/or encoding (UTF-8, ASCII, Windows-1252).",
-    type=str
+    help="Specify the line ending (CR, LF, CRLF, DOS, Unix) and/or encoding (UTF-8, ASCII, Windows-1252)."
 )
 
 # Parse arguments
 args = parser.parse_args()
 try:
     conversion_settings = parse_conversion_args(args.convert)
+    print("File:", args.file)
     print("Conversion Settings:", conversion_settings)
 except argparse.ArgumentTypeError as e:
     parser.error(str(e))
