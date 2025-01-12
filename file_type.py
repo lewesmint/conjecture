@@ -1,52 +1,52 @@
 import argparse
 
-# Allowed values
 VALID_LINE_ENDINGS = {'cr', 'lf', 'crlf', 'dos', 'unix'}
 VALID_ENCODINGS = {'utf-8', 'ascii', 'windows-1252'}
 
-def validate_conversion(value):
-    """
-    Validate and categorise the input value as line ending or encoding.
-    """
-    value = value.lower()  # Make it case-insensitive
-    if value in VALID_LINE_ENDINGS:
-        return ('line_ending', value)
-    elif value in VALID_ENCODINGS:
-        return ('encoding', value)
-    else:
-        raise argparse.ArgumentTypeError(f"Invalid value: '{value}'. Must be a valid line ending or encoding.")
-
 def parse_conversion_args(conversion_args):
-    """
-    Parse and validate the -c arguments (one or two).
-    """
-    parsed_args = {'line_ending': None, 'encoding': None}
+    parsed = {'line_ending': None, 'encoding': None}
     for arg in conversion_args:
-        category, value = validate_conversion(arg)
-        if parsed_args[category] is not None:
-            raise argparse.ArgumentTypeError(f"Duplicate {category}: '{value}'")
-        parsed_args[category] = value
+        arg = arg.lower()
+        if arg in VALID_LINE_ENDINGS:
+            parsed['line_ending'] = arg
+        elif arg in VALID_ENCODINGS:
+            parsed['encoding'] = arg
+        else:
+            raise ValueError(f"Invalid conversion argument: {arg}")
+    return parsed
 
-    if not parsed_args['line_ending'] and not parsed_args['encoding']:
-        raise argparse.ArgumentTypeError("At least one valid line ending or encoding must be provided.")
-    return parsed_args
+def convert_file(file_path, output_path, line_ending=None, from_encoding='utf-8', to_encoding='utf-8'):
+    # Read file
+    with open(file_path, 'rb') as f:
+        content = f.read()
+    
+    # Decode content
+    text = content.decode(from_encoding, errors='replace')
+    
+    # Convert line endings
+    if line_ending:
+        line_endings_map = {'cr': '\r', 'lf': '\n', 'crlf': '\r\n', 'dos': '\r\n', 'unix': '\n'}
+        text = text.replace('\r\n', '\n').replace('\r', '\n').replace('\n', line_endings_map[line_ending])
+    
+    # Write with target encoding
+    with open(output_path, 'w', encoding=to_encoding) as f:
+        f.write(text)
 
-# Argparse setup
-parser = argparse.ArgumentParser(description="File conversion tool.")
-parser.add_argument(
-    'file', type=str,
-    help="Path to the file to be converted."
-)
-parser.add_argument(
-    '-c', '--convert', nargs='+', required=True,
-    help="Specify the line ending (CR, LF, CRLF, DOS, Unix) and/or encoding (UTF-8, ASCII, Windows-1252)."
-)
-
-# Parse arguments
+# Argument parsing
+parser = argparse.ArgumentParser(description="File conversion tool")
+parser.add_argument('file', help="Path to the file to be converted")
+parser.add_argument('-c', '--convert', nargs='+', help="Optional: Line ending and/or encoding")
 args = parser.parse_args()
-try:
-    conversion_settings = parse_conversion_args(args.convert)
-    print("File:", args.file)
-    print("Conversion Settings:", conversion_settings)
-except argparse.ArgumentTypeError as e:
-    parser.error(str(e))
+
+# Parse -c arguments
+conversion_settings = parse_conversion_args(args.convert) if args.convert else {}
+
+# Perform conversion
+output_file = "converted_" + args.file
+convert_file(
+    file_path=args.file,
+    output_path=output_file,
+    line_ending=conversion_settings.get('line_ending'),
+    to_encoding=conversion_settings.get('encoding')
+)
+print(f"File converted successfully: {output_file}")
